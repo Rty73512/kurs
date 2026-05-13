@@ -195,8 +195,7 @@ class PasswordManager:
             ("🔍 Поиск", self.search_password, '#e67e22'),
             ("📋 Копировать", self.copy_password, '#3498db'),
             ("✏️ Изменить", self.edit_password, '#f39c12'),
-            ("🗑️ Удалить", self.delete_password, '#e74c3c'),
-            ("🎲 Генератор", self.generate_password_window, '#9b59b6')
+            ("🗑️ Удалить", self.delete_password, '#e74c3c')
         ]
         
         for text, command, _ in actions:
@@ -227,10 +226,10 @@ class PasswordManager:
                                  selectmode='browse')
         
         # Настройка заголовков
-        self.tree.heading('service', text='Сервис', command=lambda: self.sort_tree('service', False))
-        self.tree.heading('username', text='Логин', command=lambda: self.sort_tree('username', False))
-        self.tree.heading('password', text='Пароль', command=lambda: self.sort_tree('password', False))
-        self.tree.heading('notes', text='Заметки', command=lambda: self.sort_tree('notes', False))
+        self.tree.heading('service', text='Сервис')
+        self.tree.heading('username', text='Логин')
+        self.tree.heading('password', text='Пароль')
+        self.tree.heading('notes', text='Заметки')
         
         # Настройка ширины колонок
         self.tree.column('service', width=200, minwidth=100)
@@ -251,15 +250,6 @@ class PasswordManager:
         # Настройка весов для ресайза
         tree_frame.grid_rowconfigure(0, weight=1)
         tree_frame.grid_columnconfigure(0, weight=1)
-        
-        # Статусная строка
-        self.status_var = tk.StringVar()
-        self.status_var.set("Готов к работе")
-        status_bar = ttk.Label(main_frame, 
-                              textvariable=self.status_var,
-                              relief='sunken',
-                              padding=(5, 2))
-        status_bar.pack(fill='x', pady=(10, 0))
         
         # Двойной клик для копирования
         self.tree.bind('<Double-Button-1>', lambda e: self.copy_password())
@@ -507,48 +497,6 @@ class PasswordManager:
             use_special=True
         )
     
-    def generate_password_window(self):
-        """Окно генератора паролей"""
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Генератор паролей")
-        dialog.geometry("400x300")
-        dialog.resizable(False, False)
-        
-        dialog.transient(self.root)
-        dialog.grab_set()
-        dialog.configure(bg=self.colors['bg'])
-        
-        frame = ttk.Frame(dialog, padding=(20, 15))
-        frame.pack(expand=True, fill='both')
-        
-        ttk.Label(frame, text="Сгенерированный пароль:", font=('Arial', 11)).pack()
-        
-        password_var = tk.StringVar()
-        password_entry = ttk.Entry(frame, 
-                                   textvariable=password_var,
-                                   font=('Arial', 14),
-                                   justify='center')
-        password_entry.pack(pady=20, fill='x')
-        
-        def generate_new():
-            password = self.generate_password()
-            password_var.set(password)
-        
-        button_frame = ttk.Frame(frame)
-        button_frame.pack(pady=20)
-        
-        gen_button = ttk.Button(button_frame, 
-                                text="Сгенерировать", 
-                                command=generate_new)
-        gen_button.pack(side='left', padx=5)
-        
-        copy_button = ttk.Button(button_frame, 
-                                text="Копировать", 
-                                command=lambda: pyperclip.copy(password_var.get()))
-        copy_button.pack(side='left', padx=5)
-        
-        # Сразу генерируем первый пароль
-        generate_new()
     
     def search_password(self):
         """Поиск пароля"""
@@ -592,8 +540,6 @@ class PasswordManager:
         if service in self.passwords:
             password = self.passwords[service]['password']
             pyperclip.copy(password)
-            self.status_var.set(f"Пароль для {service} скопирован в буфер обмена")
-            self.root.after(3000, lambda: self.status_var.set("Готов к работе"))
     
     def edit_password(self):
         """Редактирование пароля"""
@@ -692,7 +638,6 @@ class PasswordManager:
             if service in self.passwords:
                 del self.passwords[service]
                 self.save_data()
-                self.status_var.set(f"Пароль для {service} удален")
                 self.refresh_password_list()
     
     def change_master_password(self):
@@ -727,16 +672,6 @@ class PasswordManager:
         self.master_password = new_password
         messagebox.showinfo("Успех", "Мастер-пароль изменен!")
     
-    def sort_tree(self, col, reverse):
-        """Сортировка по колонке"""
-        items = [(self.tree.set(item, col), item) for item in self.tree.get_children('')]
-        items.sort(reverse=reverse)
-        
-        for index, (val, item) in enumerate(items):
-            self.tree.move(item, '', index)
-        
-        # Переключаем направление сортировки
-        self.tree.heading(col, command=lambda: self.sort_tree(col, not reverse))
     
     def refresh_password_list(self):
         """Обновление списка паролей"""
