@@ -19,6 +19,7 @@ class PasswordManager:
         self.root.title("PasswordManager")
         self.root.geometry("900x600")
         self.root.resizable(True, True)
+        self.root.minsize(800, 500)
         
        
         # Переменные
@@ -92,11 +93,9 @@ class PasswordManager:
         main_frame = ttk.Frame(self.root, padding=(50, 30))
         main_frame.pack(expand=True, fill='both')
         
-        # Заголовок
-        header = ttk.Label(main_frame, text="", style='Header.TLabel')
-        header.pack()
-        
-        subtitle = ttk.Label(main_frame, text="Вход", style='SubHeader.TLabel')
+        # Подзаголовок (будет меняться)
+        self.subtitle_var = tk.StringVar(value="Вход в систему")
+        subtitle = ttk.Label(main_frame, textvariable=self.subtitle_var, style='SubHeader.TLabel')
         subtitle.pack()
         
         # Фрейм для ввода
@@ -106,49 +105,66 @@ class PasswordManager:
         # Мастер-пароль
         ttk.Label(input_frame, text="Введите мастер-пароль:", font=('Arial', 11)).pack(anchor='w')
         self.master_password_var = tk.StringVar()
-        master_password_entry = ttk.Entry(input_frame, textvariable=self.master_password_var, show="●", width=40,font=('Arial', 11))
+        master_password_entry = ttk.Entry(input_frame, 
+                                        textvariable=self.master_password_var, 
+                                        show="●", 
+                                        width=40,
+                                        font=('Arial', 11))
         master_password_entry.pack(pady=(5, 20))
         
-        # Подтверждение пароля (только для регистрации)
-        ttk.Label(input_frame, text="Подтвердите пароль:", font=('Arial', 11)).pack(anchor='w')
+        # Фрейм для подтверждения пароля (изначально скрыт)
+        self.confirm_frame = ttk.Frame(input_frame)
+        # Не пакуем сразу, будет показан при регистрации
+        
+        ttk.Label(self.confirm_frame, text="Подтвердите пароль:", font=('Arial', 11)).pack(anchor='w')
         self.confirm_password_var = tk.StringVar()
-        confirm_password_entry = ttk.Entry(input_frame,
-                                          textvariable=self.confirm_password_var,
-                                          show="●", 
-                                          width=40,
-                                          font=('Arial', 11))
+        confirm_password_entry = ttk.Entry(self.confirm_frame,
+                                        textvariable=self.confirm_password_var,
+                                        show="●", 
+                                        width=40,
+                                        font=('Arial', 11))
         confirm_password_entry.pack(pady=(5, 20))
         
-        # Фрейм для кнопок
-        button_frame = ttk.Frame(input_frame)
-        button_frame.pack(pady=20)
-        
-        # Кнопки входа и регистрации
-        login_button = ttk.Button(button_frame, 
-                                  text="Войти", 
-                                  command=self.login,
-                                  width=15)
-        login_button.pack(side='left', padx=5)
-        
-        register_button = ttk.Button(button_frame, 
-                                     text="Регистрация", 
-                                     command=self.register,
-                                     width=15)
-        register_button.pack(side='left', padx=5)
-        
-        # Информация
-        info_frame = ttk.Frame(main_frame)
-        info_frame.pack(pady=20)
+        # Информационная панель (изначально скрыта)
+        self.info_frame = ttk.Frame(main_frame)
+        # Не пакуем сразу, будет показан при регистрации
         
         info_text = """
         Рекомендации по созданию мастер-пароля:
-        .....
-        .........
-        .......
+        • Минимум 8 символов
+        • Используйте заглавные и строчные буквы
+        • Добавьте цифры и специальные символы
+        • Не используйте личную информацию
+        • Не используйте распространенные пароли
         """
         
-        ttk.Label(info_frame, text=info_text, font=('Arial', 9), 
-                 justify='left').pack()
+        info_label = ttk.Label(self.info_frame, 
+                            text=info_text, 
+                            font=('Arial', 9),
+                            justify='left',
+                            wraplength=400)
+        info_label.pack(pady=10)
+        
+        # Фрейм для кнопок
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(pady=20)
+        
+        # Кнопки входа и регистрации
+        self.login_button = ttk.Button(button_frame, 
+                                    text="Войти", 
+                                    command=self.login,
+                                    width=15)
+        self.login_button.pack(side='left', padx=5)
+        
+        self.register_button = ttk.Button(button_frame, 
+                                        text="Регистрация", 
+                                        command=self.toggle_register_mode,
+                                        width=15)
+        self.register_button.pack(side='left', padx=5)
+        
+        # Переменная для отслеживания режима
+        self.is_register_mode = False
+
     
     def show_main_screen(self):
         """Главный экран менеджера паролей"""
@@ -262,25 +278,72 @@ class PasswordManager:
         for widget in self.root.winfo_children():
             widget.destroy()
     
+
+    def toggle_register_mode(self):
+        """Переключение между режимами входа и регистрации"""
+        self.is_register_mode = not self.is_register_mode
+        
+        if self.is_register_mode:
+            # Режим регистрации
+            self.subtitle_var.set("Регистрация нового пользователя")
+            self.login_button.configure(text="Зарегистрироваться", command=self.register)
+            self.register_button.configure(text="Назад ко входу")
+            
+            # Показываем поле подтверждения пароля
+            self.confirm_frame.pack(fill='x', pady=(0, 10))
+            
+            # Показываем рекомендации
+            self.info_frame.pack(pady=20)
+            
+        else:
+            # Режим входа
+            self.subtitle_var.set("Вход в систему")
+            self.login_button.configure(text="Войти", command=self.login)
+            self.register_button.configure(text="Регистрация")
+            
+            # Скрываем поле подтверждения пароля
+            self.confirm_frame.pack_forget()
+            
+            # Скрываем рекомендации
+            self.info_frame.pack_forget()
+            
+            # Очищаем поля
+            self.master_password_var.set("")
+            self.confirm_password_var.set("")
+
+    
     def login(self):
         """Вход в систему"""
         master_password = self.master_password_var.get()
-        confirm_password = self.confirm_password_var.get()
         
-        if not master_password or not confirm_password:
-            messagebox.showerror("Ошибка", "Заполните все поля!")
+        # В режиме входа не требуем подтверждения пароля
+        if self.is_register_mode:
+            confirm_password = self.confirm_password_var.get()
+            if not master_password or not confirm_password:
+                messagebox.showerror("Ошибка", "Заполните все поля!")
+                return
+            if master_password != confirm_password:
+                messagebox.showerror("Ошибка", "Пароли не совпадают!")
+                return
+        
+        if not master_password:
+            messagebox.showerror("Ошибка", "Введите мастер-пароль!")
             return
         
-        if master_password != confirm_password:
-            messagebox.showerror("Ошибка", "Пароли не совпадают!")
+        # Проверяем существование файлов данных
+        if not os.path.exists(self.crypto.salt_file):
+            messagebox.showerror("Ошибка", "Данные не найдены. Сначала зарегистрируйтесь!")
             return
         
         # Проверка пароля через крипто-модуль
         if self.crypto.verify_master_password(master_password):
             self.master_password = master_password
-            self.crypto.initialize_fernet()
+            
+            # Проверяем, инициализирован ли уже fernet
+            if self.crypto.fernet is None:
+                self.crypto.initialize_fernet()
+            
             self.load_data()
-            messagebox.showinfo("Успех", "Вход выполнен успешно!")
             self.show_main_screen()
         else:
             messagebox.showerror("Ошибка", "Неверный мастер-пароль!")
@@ -318,6 +381,14 @@ class PasswordManager:
                                     "Данные уже существуют. Создать новые?\n"
                                     "Старые данные будут потеряны!"):
                 return
+            
+            # Удаляем старые файлы
+            for file_path in [self.data_file, self.crypto.salt_file, self.crypto.verification_file]:
+                if os.path.exists(file_path):
+                    try:
+                        os.remove(file_path)
+                    except:
+                        pass
         
         # Создание нового мастер-ключа через crypto модуль
         self.master_password = master_password
@@ -331,19 +402,6 @@ class PasswordManager:
         messagebox.showinfo("Успех", "Регистрация выполнена успешно!")
         self.show_main_screen()
     
-    def create_new_data(self):
-        """Создание новых данных"""
-        # Генерация ключа
-        key = Fernet.generate_key()
-        self.fernet = Fernet(key)
-        
-        # Сохранение ключа
-        with open(self.key_file, 'wb') as key_file:
-            key_file.write(key)
-        
-        # Создание пустого файла данных
-        self.passwords = {}
-        self.save_data()
     
     def save_data(self):
         """Сохранение данных с шифрованием"""
@@ -387,8 +445,10 @@ class PasswordManager:
         if messagebox.askyesno("Выход", "Вы уверены, что хотите выйти?"):
             self.current_user = None
             self.master_password = None
-            self.fernet = None
             self.passwords = {}
+            # Сбрасываем крипто-менеджер
+            self.crypto.fernet = None
+            self.crypto.master_key = None
             self.show_login_screen()
     
     def add_password(self):
@@ -527,31 +587,67 @@ class PasswordManager:
                     data.get('notes', '')
                 ))
     
+    def copy_to_clipboard(self, text):
+        """
+        Простое кроссплатформенное копирование в буфер обмена
+        """
+        import platform
+        import subprocess
+        
+        system = platform.system()
+        
+        try:
+            if system == 'Windows':
+                # Для Windows
+                subprocess.run(['clip'], input=text.encode('utf-8'), check=False)
+                return True
+            else:
+                # Для Linux/Mac
+                try:
+                    # Пробуем xclip (Linux)
+                    subprocess.run(['xclip', '-selection', 'clipboard'], 
+                                input=text.encode('utf-8'), check=False)
+                    return True
+                except:
+                    try:
+                        # Пробуем xsel (Linux)
+                        subprocess.run(['xsel', '-ib'], 
+                                    input=text.encode('utf-8'), check=False)
+                        return True
+                    except:
+                        try:
+                            # Для macOS
+                            subprocess.run(['pbcopy'], 
+                                        input=text.encode('utf-8'), check=False)
+                            return True
+                        except:
+                            return False
+        except:
+            return False
+
+
     def copy_password(self):
         """Копирование пароля в буфер обмена"""
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showinfo("Информация", "Выберите пароль для копирования")
+        service = self.get_selected_service()
+        if service is None:
             return
         
-        item = self.tree.item(selected[0])
-        service = item['values'][0]
+        password = self.passwords[service]['password']
         
-        if service in self.passwords:
-            password = self.passwords[service]['password']
-            pyperclip.copy(password)
+        if self.copy_to_clipboard(password):
+            messagebox.showinfo("Успех", f"Пароль для {service} скопирован в буфер обмена")
+        else:
+            messagebox.showwarning(
+                "Предупреждение",
+                f"Не удалось скопировать пароль автоматически.\n\n"
+                f"Пароль для {service}: {password}\n\n"
+                "Скопируйте его вручную."
+            )
     
     def edit_password(self):
         """Редактирование пароля"""
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showinfo("Информация", "Выберите пароль для редактирования")
-            return
-        
-        item = self.tree.item(selected[0])
-        service = item['values'][0]
-        
-        if service not in self.passwords:
+        service = self.get_selected_service()
+        if service is None:
             return
         
         data = self.passwords[service]
@@ -590,7 +686,7 @@ class PasswordManager:
             entry.pack(side='left', fill='x', expand=True, padx=(10, 0))
             entries[field_name] = entry
         
-        # Кнопки
+        # Кнопки создаем ДО определения функции save_changes
         button_frame = ttk.Frame(form_frame)
         button_frame.pack(pady=20)
         
@@ -618,6 +714,7 @@ class PasswordManager:
             dialog.destroy()
             self.refresh_password_list()
         
+        # Кнопки
         save_button = ttk.Button(button_frame, text="Сохранить", command=save_changes)
         save_button.pack(side='left', padx=5)
         
@@ -687,3 +784,20 @@ class PasswordManager:
                 '********',
                 data.get('notes', '')
             ))
+
+    
+    def get_selected_service(self):
+        """Получение выбранного сервиса из таблицы"""
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showinfo("Информация", "Выберите пароль из списка")
+            return None
+        
+        item = self.tree.item(selected[0])
+        service = item['values'][0]
+        
+        if service not in self.passwords:
+            messagebox.showerror("Ошибка", "Выбранный пароль не найден в базе данных")
+            return None
+        
+        return service

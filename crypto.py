@@ -107,10 +107,18 @@ class CryptoManager:
             
             # Проверка через верификационный хеш
             if os.path.exists(self.verification_file):
-                return self.verify_with_hash(key)
+                result = self.verify_with_hash(key)
+                if result:
+                    # Ключ уже сохранен в verify_with_hash
+                    return True
+                return False
             
             # Если нет файла верификации, пробуем загрузить данные
-            return self.try_decrypt_existing_data(key)
+            result = self.try_decrypt_existing_data(key)
+            if result:
+                # Ключ уже сохранен в try_decrypt_existing_data
+                return True
+            return False
             
         except Exception as e:
             print(f"Ошибка верификации: {e}")
@@ -153,7 +161,12 @@ class CryptoManager:
             decrypted_data = fernet.decrypt(encrypted_data)
             
             # Проверка префикса
-            return decrypted_data.startswith(b"PASSWORD_MANAGER_VERIFICATION")
+            if decrypted_data.startswith(b"PASSWORD_MANAGER_VERIFICATION"):
+                # СОХРАНЯЕМ ключ при успешной верификации
+                self.master_key = key
+                self.fernet = fernet
+                return True
+            return False
         except:
             return False
     
@@ -171,14 +184,20 @@ class CryptoManager:
             # Проверяем, есть ли файл с данными
             data_file = "passwords.enc"
             if not os.path.exists(data_file):
-                return True  # Если данных нет, считаем пароль верным
+                # Если данных нет, сохраняем ключ и считаем пароль верным
+                self.master_key = key
+                self.fernet = Fernet(base64.urlsafe_b64encode(key))
+                return True
             
             # Пробуем расшифровать
             fernet = Fernet(base64.urlsafe_b64encode(key))
             with open(data_file, 'rb') as f:
                 encrypted_data = f.read()
             
+            # Пробуем расшифровать
             fernet.decrypt(encrypted_data)
+            
+            # Если расшифровка успешна, сохраняем ключ
             self.master_key = key
             self.fernet = fernet
             return True
