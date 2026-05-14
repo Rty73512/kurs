@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from tkinter import ttk, messagebox, simpledialog, filedialog
 import json
 import os
 import base64
@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import pyperclip
 import secrets
 import string
+from import_export import ImportExport
 
 
 from crypto import CryptoManager
@@ -211,7 +212,9 @@ class PasswordManager:
             ("🔍 Поиск", self.search_password, '#e67e22'),
             ("📋 Копировать", self.copy_password, '#3498db'),
             ("✏️ Изменить", self.edit_password, '#f39c12'),
-            ("🗑️ Удалить", self.delete_password, '#e74c3c')
+            ("🗑️ Удалить", self.delete_password, '#e74c3c'),
+            ("📥 Импорт", self.import_passwords, '#2ecc71'), 
+            ("📤 Экспорт", self.export_passwords, '#e67e22')
         ]
         
         for text, command, _ in actions:
@@ -801,3 +804,176 @@ class PasswordManager:
             return None
         
         return service
+    def export_passwords(self):
+        """Экспорт паролей в файл"""
+        if not self.passwords:
+            messagebox.showwarning("Предупреждение", "Нет паролей для экспорта")
+            return
+        
+        # Диалог выбора формата
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Экспорт паролей")
+        dialog.geometry("400x300")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.configure(bg=self.colors['bg'])
+        
+        frame = ttk.Frame(dialog, padding=(20, 15))
+        frame.pack(expand=True, fill='both')
+        
+        ttk.Label(frame, text="Выберите формат экспорта:", font=('Arial', 12)).pack(pady=10)
+        
+        format_var = tk.StringVar(value="csv")
+        
+        formats = [
+            ("CSV (таблица)", "csv"),
+            ("JSON (для программ)", "json"),
+            ("Текстовый файл (для чтения)", "txt")
+        ]
+        
+        for text, value in formats:
+            ttk.Radiobutton(frame, text=text, variable=format_var, value=value).pack(anchor='w', pady=5)
+        
+        def do_export():
+            format_type = format_var.get()
+            
+            # Выбор файла для сохранения
+            file_types = {
+                'csv': [('CSV files', '*.csv')],
+                'json': [('JSON files', '*.json')],
+                'txt': [('Text files', '*.txt')]
+            }
+            
+            file_path = tk.filedialog.asksaveasfilename(
+                defaultextension=f".{format_type}",
+                filetypes=file_types.get(format_type, [('All files', '*.*')]),
+                title="Сохранить как"
+            )
+            
+            if not file_path:
+                return
+            
+            ie = ImportExport(self.passwords)
+            
+            if format_type == 'csv':
+                success = ie.export_to_csv(file_path)
+            elif format_type == 'json':
+                success = ie.export_to_json(file_path)
+            elif format_type == 'txt':
+                success = ie.export_to_readable_text(file_path)
+            else:
+                success = False
+            
+            if success:
+                messagebox.showinfo("Успех", f"Пароли экспортированы в:\n{file_path}")
+                dialog.destroy()
+            else:
+                messagebox.showerror("Ошибка", "Не удалось экспортировать пароли")
+        
+        button_frame = ttk.Frame(frame)
+        button_frame.pack(pady=20)
+        
+        ttk.Button(button_frame, text="Экспортировать", command=do_export).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Отмена", command=dialog.destroy).pack(side='left', padx=5)
+
+
+    def import_passwords(self):
+        """Импорт паролей из файла"""
+        # Выбор файла для импорта
+        file_path = tk.filedialog.askopenfilename(
+            filetypes=[
+                ('All supported', '*.csv;*.json'),
+                ('CSV files', '*.csv'),
+                ('JSON files', '*.json'),
+                ('All files', '*.*')
+            ],
+            title="Выберите файл для импорта"
+        )
+        
+        if not file_path:
+            return
+        
+        ie = ImportExport(self.passwords)
+        imported = ie.detect_format_and_import(file_path)
+        
+        if not imported:
+            messagebox.showerror("Ошибка", "Не удалось импортировать пароли из файла")
+            return
+        
+        # Показываем результат импорта
+        result = messagebox.askyesno(
+            "Импорт паролей",
+            f"Найдено паролей: {len(imported)}\n\n"
+            f"Перезаписать существующие пароли?\n"
+            f"(Да - перезаписать, Нет - добавить только новые)"
+        )
+        
+        # Объединяем пароли
+        self.passwords, added, updated = ie.merge_passwords(imported, overwrite=result)
+        
+        # Сохраняем
+        self.save_data()
+        self.refresh_password_list()
+        
+        messagebox.showinfo(
+            "Успех",
+            f"Импорт завершен!\n"
+            f"Добавлено: {added}\n"
+            f"Обновлено: {updated}"
+        )
+
+
+    def quick_import_from_browser(self):
+        """Быстрый импорт из браузера"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Импорт из браузера")
+        dialog.geometry("450x350")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.configure(bg=self.colors['bg'])
+        
+        frame = ttk.Frame(dialog, padding=(20, 15))
+        frame.pack(expand=True, fill='both')
+        
+        ttk.Label(frame, text="Импорт паролей из браузера", font=('Arial', 14, 'bold')).pack(pady=10)
+        
+        # Инструкции
+        instructions = """
+        Инструкция:
+        1. Откройте браузер
+        2. Перейдите в настройки паролей
+        3. Экспортируйте пароли в CSV файл
+        4. Выберите файл ниже
+        
+        Поддерживаются:
+        • Google Chrome
+        • Mozilla Firefox
+        • Microsoft Edge
+        """
+        
+        ttk.Label(frame, text=instructions, font=('Arial', 9), justify='left').pack(pady=10)
+        
+        def select_file():
+            file_path = tk.filedialog.askopenfilename(
+                filetypes=[('CSV files', '*.csv')],
+                title="Выберите файл с паролями из браузера"
+            )
+            
+            if file_path:
+                ie = ImportExport(self.passwords)
+                imported = ie.detect_format_and_import(file_path)
+                
+                if imported:
+                    self.passwords, added, _ = ie.merge_passwords(imported, overwrite=False)
+                    self.save_data()
+                    self.refresh_password_list()
+                    
+                    messagebox.showinfo("Успех", f"Импортировано паролей: {added}")
+                    dialog.destroy()
+                else:
+                    messagebox.showerror("Ошибка", "Не удалось распознать формат файла")
+        
+        ttk.Button(frame, text="Выбрать файл", command=select_file).pack(pady=10)
+        ttk.Button(frame, text="Отмена", command=dialog.destroy).pack(pady=5)
