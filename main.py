@@ -1,17 +1,5 @@
 import tkinter as tk
 from tkinter import messagebox
-# from tkinter import ttk, messagebox, simpledialog
-# import json
-# import os
-# import base64
-# from cryptography.fernet import Fernet
-# from cryptography.hazmat.primitives import hashes
-# from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-# import pyperclip
-# import secrets
-# # import string
-
-# from crypto import CryptoManager
 from gui import PasswordManager
 
 def main():

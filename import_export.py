@@ -251,7 +251,7 @@ class ImportExport:
             return {}
     
     def merge_passwords(self, new_passwords: Dict[str, Any], 
-                       overwrite: bool = False) -> tuple:
+                   overwrite: bool = False) -> tuple:
         """
         Объединение существующих паролей с импортированными
         
@@ -273,6 +273,9 @@ class ImportExport:
             else:
                 self.passwords[service] = data
                 added += 1
+        
+        # Сортируем после объединения
+        self.passwords = dict(sorted(self.passwords.items(), key=lambda x: x[0].lower()))
         
         return self.passwords, added, updated
     

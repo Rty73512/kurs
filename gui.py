@@ -18,9 +18,9 @@ class PasswordManager:
     def __init__(self, root):
         self.root = root
         self.root.title("PasswordManager")
-        self.root.geometry("900x600")
+        self.root.geometry("1050x650")
         self.root.resizable(True, True)
-        self.root.minsize(800, 500)
+        self.root.minsize(1050, 500)
         
        
         # Переменные
@@ -194,13 +194,6 @@ class PasswordManager:
                                    command=self.logout,
                                    width=12)
         logout_button.pack(side='right', padx=(10, 0))
-        
-        # Кнопка смены мастер-пароля
-        change_password_button = ttk.Button(control_frame, 
-                                           text="Сменить пароль", 
-                                           command=self.change_master_password,
-                                           width=15)
-        change_password_button.pack(side='right', padx=5)
 
         # Кнопка сброса данных
         reset_button = ttk.Button(control_frame, 
@@ -216,8 +209,9 @@ class PasswordManager:
         # Создание кнопок действий
         actions = [
             ("➕ Добавить", self.add_password, '#27ae60'),
-            ("🔍 Поиск", self.search_password, '#e67e22'),
-            ("📋 Копировать", self.copy_password, '#3498db'),
+            ("📋 Копировать пароль", self.copy_password, '#3498db'),
+            ("👤 Копировать логин", self.copy_username, '#2ecc71'),
+            ("🔗 Копировать URL", self.copy_url, '#9b59b6'),
             ("✏️ Изменить", self.edit_password, '#f39c12'),
             ("🗑️ Удалить", self.delete_password, '#e74c3c'),
             ("📥 Импорт", self.import_passwords, '#2ecc71'), 
@@ -225,8 +219,8 @@ class PasswordManager:
         ]
         
         for text, command, _ in actions:
-            btn = ttk.Button(action_frame, text=text, command=command, width=12)
-            btn.pack(side='left', padx=3)
+            btn = ttk.Button(action_frame, text=text, command=command, width=14)
+            btn.pack(side='left', padx=2)
         
         # Поисковая строка
         search_frame = ttk.Frame(main_frame)
@@ -429,7 +423,7 @@ class PasswordManager:
             messagebox.showerror("Ошибка", f"Ошибка сохранения данных: {str(e)}")
 
     def load_data(self):
-        """Загрузка данных с расшифровкой"""
+        """Загрузка данных с расшифровкой и сортировкой"""
         try:
             if not os.path.exists(self.data_file):
                 self.passwords = {}
@@ -444,6 +438,10 @@ class PasswordManager:
             
             # Расшифровка
             self.passwords = self.crypto.decrypt_data(encrypted_data)
+            
+            # Сортируем по ключам при загрузке
+            if self.passwords:
+                self.passwords = dict(sorted(self.passwords.items(), key=lambda x: x[0].lower()))
             
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка загрузки данных: {str(e)}")
@@ -534,7 +532,7 @@ class PasswordManager:
         
         if service in self.passwords:
             if not messagebox.askyesno("Предупреждение", 
-                                      f"Пароль для {service} уже существует. Обновить?"):
+                                    f"Пароль для {service} уже существует. Обновить?"):
                 return
         
         # Сохранение данных
@@ -544,6 +542,9 @@ class PasswordManager:
             'url': url,
             'notes': notes
         }
+        
+        # Сортируем словарь по ключам
+        self.passwords = dict(sorted(self.passwords.items(), key=lambda x: x[0].lower()))
         
         self.save_data()
         messagebox.showinfo("Успех", f"Пароль для {service} сохранен!")
@@ -567,15 +568,6 @@ class PasswordManager:
         )
     
     
-    def search_password(self):
-        """Поиск пароля"""
-        self.search_var.set("")
-        # Фокусируемся на первом элементе после поиска
-        children = self.tree.get_children()
-        if children:
-            self.tree.selection_set(children[0])
-            self.tree.focus(children[0])
-    
     def on_search_change(self, *args):
         """Обработка изменения поискового запроса"""
         search_term = self.search_var.get().lower()
@@ -597,9 +589,7 @@ class PasswordManager:
                 ))
     
     def copy_to_clipboard(self, text):
-        """
-        Простое кроссплатформенное копирование в буфер обмена
-        """
+        """Кроссплатформенное копирование текста в буфер обмена"""
         import platform
         import subprocess
         
@@ -607,25 +597,20 @@ class PasswordManager:
         
         try:
             if system == 'Windows':
-                # Для Windows
                 subprocess.run(['clip'], input=text.encode('utf-8'), check=False)
                 return True
             else:
-                # Для Linux/Mac
                 try:
-                    # Пробуем xclip (Linux)
                     subprocess.run(['xclip', '-selection', 'clipboard'], 
                                 input=text.encode('utf-8'), check=False)
                     return True
                 except:
                     try:
-                        # Пробуем xsel (Linux)
                         subprocess.run(['xsel', '-ib'], 
                                     input=text.encode('utf-8'), check=False)
                         return True
                     except:
                         try:
-                            # Для macOS
                             subprocess.run(['pbcopy'], 
                                         input=text.encode('utf-8'), check=False)
                             return True
@@ -650,6 +635,48 @@ class PasswordManager:
                 "Предупреждение",
                 f"Не удалось скопировать пароль автоматически.\n\n"
                 f"Пароль для {service}: {password}\n\n"
+                "Скопируйте его вручную."
+            )
+
+
+    def copy_username(self):
+        """Копирование логина в буфер обмена"""
+        service = self.get_selected_service()
+        if service is None:
+            return
+        
+        username = self.passwords[service]['username']
+        
+        if self.copy_to_clipboard(username):
+            messagebox.showinfo("Успех", f"Логин для {service} скопирован в буфер обмена")
+        else:
+            messagebox.showwarning(
+                "Предупреждение",
+                f"Не удалось скопировать логин автоматически.\n\n"
+                f"Логин для {service}: {username}\n\n"
+                "Скопируйте его вручную."
+            )
+
+
+    def copy_url(self):
+        """Копирование URL в буфер обмена"""
+        service = self.get_selected_service()
+        if service is None:
+            return
+        
+        url = self.passwords[service].get('url', '')
+        
+        if not url:
+            messagebox.showinfo("Информация", f"URL для {service} не указан")
+            return
+        
+        if self.copy_to_clipboard(url):
+            messagebox.showinfo("Успех", f"URL для {service} скопирован в буфер обмена")
+        else:
+            messagebox.showwarning(
+                "Предупреждение",
+                f"Не удалось скопировать URL автоматически.\n\n"
+                f"URL для {service}: {url}\n\n"
                 "Скопируйте его вручную."
             )
     
@@ -717,6 +744,10 @@ class PasswordManager:
                 del self.passwords[service]
             
             self.passwords[new_service] = new_data
+            
+            # Сортируем словарь по ключам
+            self.passwords = dict(sorted(self.passwords.items(), key=lambda x: x[0].lower()))
+            
             self.save_data()
             
             messagebox.showinfo("Успех", "Пароль обновлен!")
@@ -746,53 +777,28 @@ class PasswordManager:
                 self.save_data()
                 self.refresh_password_list()
     
-    def change_master_password(self):
-        """Смена мастер-пароля"""
-        old_password = simpledialog.askstring("Смена пароля", 
-                                              "Введите старый мастер-пароль:",
-                                              show='●')
-        
-        if old_password != self.master_password:
-            messagebox.showerror("Ошибка", "Неверный мастер-пароль!")
-            return
-        
-        new_password = simpledialog.askstring("Смена пароля", 
-                                              "Введите новый мастер-пароль:",
-                                              show='●')
-        
-        if not new_password:
-            return
-        
-        confirm_password = simpledialog.askstring("Смена пароля", 
-                                                  "Подтвердите новый пароль:",
-                                                  show='●')
-        
-        if new_password != confirm_password:
-            messagebox.showerror("Ошибка", "Пароли не совпадают!")
-            return
-        
-        if len(new_password) < 8:
-            messagebox.showwarning("Предупреждение", 
-                                 "Рекомендуется использовать пароль длиной не менее 8 символов")
-        
-        self.master_password = new_password
-        messagebox.showinfo("Успех", "Мастер-пароль изменен!")
-    
     
     def refresh_password_list(self):
-        """Обновление списка паролей"""
+        """Обновление списка паролей с сортировкой по сервису"""
+        # Проверяем, существует ли tree
+        if not hasattr(self, 'tree'):
+            return
+        
         # Очистка текущего списка
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        # Добавление данных
-        for service, data in self.passwords.items():
-            self.tree.insert('', 'end', values=(
-                service,
-                data['username'],
-                '********',
-                data.get('notes', '')
-            ))
+        # Добавление данных с сортировкой по названию сервиса
+        if self.passwords:
+            # Сортируем по ключам (названиям сервисов)
+            for service in sorted(self.passwords.keys(), key=str.lower):
+                data = self.passwords[service]
+                self.tree.insert('', 'end', values=(
+                    service,
+                    data.get('username', ''),
+                    '********',
+                    data.get('notes', '')
+                ))
 
     
     def get_selected_service(self):
@@ -886,8 +892,7 @@ class PasswordManager:
 
     def import_passwords(self):
         """Импорт паролей из файла"""
-        # Выбор файла для импорта
-        file_path = tk.filedialog.askopenfilename(
+        file_path = filedialog.askopenfilename(
             filetypes=[
                 ('All supported', '*.csv;*.json'),
                 ('CSV files', '*.csv'),
@@ -915,7 +920,7 @@ class PasswordManager:
             f"(Да - перезаписать, Нет - добавить только новые)"
         )
         
-        # Объединяем пароли
+        # Объединяем пароли (сортировка внутри метода merge_passwords)
         self.passwords, added, updated = ie.merge_passwords(imported, overwrite=result)
         
         # Сохраняем
@@ -1073,3 +1078,12 @@ def delete_account(self):
         
     except Exception as e:
         messagebox.showerror("Ошибка", f"Не удалось удалить данные: {str(e)}")
+    
+
+    def sort_passwords(self):
+        """Принудительная сортировка паролей по алфавиту"""
+        if self.passwords:
+            self.passwords = dict(sorted(self.passwords.items(), key=lambda x: x[0].lower()))
+            self.save_data()
+            self.refresh_password_list()
+            messagebox.showinfo("Успех", "Пароли отсортированы по алфавиту")
