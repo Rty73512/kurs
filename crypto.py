@@ -121,7 +121,6 @@ class CryptoManager:
             return False
             
         except Exception as e:
-            print(f"Ошибка верификации: {e}")
             return False
     
     def create_verification_hash(self) -> None:

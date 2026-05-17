@@ -387,10 +387,7 @@ class PasswordManager:
                             "1. Войдите в систему\n"
                             "2. Перейдите в настройки\n"
                             "3. Выберите 'Сбросить все данные'\n\n"
-                            "Или удалите файлы вручную:\n"
-                            f"- {self.data_file}\n"
-                            f"- {self.crypto.salt_file}\n"
-                            f"- {self.crypto.verification_file}")
+                            "Или удалите файлы вручную:\n")
             return
         
         # Создание нового мастер-ключа через crypto модуль
@@ -1026,58 +1023,58 @@ class PasswordManager:
             messagebox.showerror("Ошибка", f"Не удалось удалить данные: {str(e)}")
 
 
-def delete_account(self):
-    """Полное удаление аккаунта со всеми данными"""
-    if not messagebox.askyesno("Удаление аккаунта", 
-                              "ВНИМАНИЕ!\n\n"
-                              "Вы собираетесь полностью удалить все данные.\n"
-                              "Это действие НЕОБРАТИМО!\n\n"
-                              "Все сохраненные пароли будут потеряны.\n\n"
-                              "Продолжить?"):
-        return
-    
-    # Тройное подтверждение
-    if not messagebox.askyesno("Подтверждение", 
-                              "Вы ДЕЙСТВИТЕЛЬНО хотите удалить все данные?"):
-        return
-    
-    # Запрашиваем мастер-пароль
-    password = simpledialog.askstring("Подтверждение", 
-                                      "Введите мастер-пароль для окончательного подтверждения:",
-                                      show='●')
-    
-    if password != self.master_password:
-        messagebox.showerror("Ошибка", "Неверный мастер-пароль!")
-        return
-    
-    # Удаляем все данные
-    try:
-        files_to_delete = [
-            self.data_file,
-            self.crypto.salt_file, 
-            self.crypto.verification_file
-        ]
+    def delete_account(self):
+        """Полное удаление аккаунта со всеми данными"""
+        if not messagebox.askyesno("Удаление аккаунта", 
+                                "ВНИМАНИЕ!\n\n"
+                                "Вы собираетесь полностью удалить все данные.\n"
+                                "Это действие НЕОБРАТИМО!\n\n"
+                                "Все сохраненные пароли будут потеряны.\n\n"
+                                "Продолжить?"):
+            return
         
-        deleted_files = []
-        for file_path in files_to_delete:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                deleted_files.append(file_path)
+        # Тройное подтверждение
+        if not messagebox.askyesno("Подтверждение", 
+                                "Вы ДЕЙСТВИТЕЛЬНО хотите удалить все данные?"):
+            return
         
-        # Очищаем память
-        self.passwords = {}
-        self.crypto.fernet = None
-        self.crypto.master_key = None
-        self.crypto.salt = None
-        self.master_password = None
+        # Запрашиваем мастер-пароль
+        password = simpledialog.askstring("Подтверждение", 
+                                        "Введите мастер-пароль для окончательного подтверждения:",
+                                        show='●')
         
-        messagebox.showinfo("Успех", 
-                          f"Аккаунт удален.\nУдалено файлов: {len(deleted_files)}\n\n"
-                          "Программа будет закрыта.")
-        self.root.destroy()
+        if password != self.master_password:
+            messagebox.showerror("Ошибка", "Неверный мастер-пароль!")
+            return
         
-    except Exception as e:
-        messagebox.showerror("Ошибка", f"Не удалось удалить данные: {str(e)}")
+        # Удаляем все данные
+        try:
+            files_to_delete = [
+                self.data_file,
+                self.crypto.salt_file, 
+                self.crypto.verification_file
+            ]
+            
+            deleted_files = []
+            for file_path in files_to_delete:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    deleted_files.append(file_path)
+            
+            # Очищаем память
+            self.passwords = {}
+            self.crypto.fernet = None
+            self.crypto.master_key = None
+            self.crypto.salt = None
+            self.master_password = None
+            
+            messagebox.showinfo("Успех", 
+                            f"Аккаунт удален.\nУдалено файлов: {len(deleted_files)}\n\n"
+                            "Программа будет закрыта.")
+            self.root.destroy()
+            
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось удалить данные: {str(e)}")
     
 
     def sort_passwords(self):
